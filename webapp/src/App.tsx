@@ -6,7 +6,11 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Divider,
   Flex,
+  Heading,
+  Spinner,
+  Stack,
 } from "@chakra-ui/react";
 import React, { useEffect } from "react";
 import web3 from "web3";
@@ -16,8 +20,11 @@ const App = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [address, setAddress] = React.useState(null);
   const [currentStep, setCurrentStep] = React.useState(0);
+  const [isVerifyingKycToken, setIsVerifyingKycToken] = React.useState(false);
+  const [isTokenVerified, setIsTokenVerified] = React.useState(false);
 
   useEffect(() => {
+    if (!isVerifyingKycToken) return;
     const callAsync = async () => {
       const w3 = new web3();
       w3.setProvider(
@@ -25,14 +32,22 @@ const App = () => {
       );
 
       const contract = new w3.eth.Contract(abi as any, contractAddress);
-      const test = await contract.methods
-        .balanceOf("0x60d247965c29979664a00F09303a75f10eE7fCc8")
-        .call();
+      try {
+        console.log("address", address);
+        const isTokenVerified = await contract.methods
+          .balanceOf(address)
+          .call();
 
-      console.log("test", test);
+        console.log("isTokenVerified", isTokenVerified);
+        console.log("typeof isTokenVerified", typeof isTokenVerified);
+
+        setIsTokenVerified(Boolean(Number(isTokenVerified)));
+      } catch (error) {}
+
+      setIsVerifyingKycToken(false);
     };
     callAsync();
-  }, []);
+  }, [isVerifyingKycToken]);
 
   return (
     <Flex
@@ -43,45 +58,80 @@ const App = () => {
     >
       <Card maxW="xl" bg="white">
         <CardHeader fontWeight={"bold"} fontSize="2xl">
-          Get Started
+          Oasis KYC
         </CardHeader>
+        <Divider />
         <CardBody>
           {(() => {
             if (currentStep === 0) {
               return (
                 <Box>
+                  <Box fontWeight={"bold"} fontSize="xl" mb="2">
+                    Welcome!
+                  </Box>
                   <Box>
-                    Click next to create a wallet and receive a public address
+                    Click next to create a new wallet and store the wallet
+                    details in Oasis Parcel
                   </Box>
                 </Box>
               );
-            } else if (currentStep === 1) {
+            } else if (currentStep === 1 && address) {
               return (
-                <Box>
+                <Stack spacing={"4"}>
+                  <Box fontWeight={"bold"} fontSize="xl" mb="2">
+                    You created a wallet!
+                  </Box>
                   <Box>My Wallet Address: {address}</Box>
                   <Box>
-                    1. <Button>Copy Address To Clipboard</Button>
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(address);
+                      }}
+                    >
+                      Copy Address To Clipboard
+                    </Button>
                   </Box>
                   <Box>
-                    2. Go to{" "}
+                    <Box></Box>
                     <Button
+                      colorScheme={"blue"}
                       variant="link"
                       onClick={() =>
                         window.open("https://identity.oasislabs.com/", "_blank")
                       }
                     >
-                      Go to Oasis Identity Website and complete KYC
+                      Go to Oasis Identity Website to complete additional KYC
+                      Steps
                     </Button>
+                  </Box>
+                </Stack>
+              );
+            } else if (currentStep === 2) {
+              return (
+                <Box>
+                  <Box fontWeight={"bold"} fontSize="xl" mb="2">
+                    {(() => {
+                      if (isVerifyingKycToken) {
+                        return (
+                          <>
+                            Verifying KYC Token... <Spinner />
+                          </>
+                        );
+                      } else if (isTokenVerified) {
+                        return "KYC Process is Complete!";
+                      } else {
+                        return "KYC Process is Incomplete!";
+                      }
+                    })()}
                   </Box>
                 </Box>
               );
-            } else if (currentStep === 2) {
-            } else if (currentStep === 3) {
             }
             return null;
           })()}
         </CardBody>
-        <CardFooter>
+        <Divider />
+        <CardFooter justifyContent={"flex-end"}>
           <ButtonGroup>
             <Button
               colorScheme={"blue"}
@@ -105,7 +155,10 @@ const App = () => {
                   } catch (error) {
                     console.log("error", error);
                   }
+                } else if (currentStep === 1) {
+                  setIsVerifyingKycToken(true);
                 }
+
                 setCurrentStep(currentStep + 1);
               }}
             >
