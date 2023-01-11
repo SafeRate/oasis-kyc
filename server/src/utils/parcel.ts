@@ -1,6 +1,4 @@
 import { Parcel, DatabaseId, Database } from "@oasislabs/parcel";
-console.log("process.env.PARCEL_CLIENT_ID", process.env.PARCEL_CLIENT_ID);
-console.log("process.env.PARCEL_PRIVATE_KEY", process.env.PARCEL_PRIVATE_KEY);
 
 export class ParcelClient {
   parcel: Parcel;
@@ -25,7 +23,7 @@ export class ParcelClient {
     }
   };
 
-  private deleteDatabase = async (databaseId: DatabaseId) => {
+  public deleteDatabase = async (databaseId: DatabaseId) => {
     try {
       await this.parcel.deleteDatabase(databaseId);
       console.log(`Successfully deleted database ${databaseId}`);
@@ -70,7 +68,7 @@ export class ParcelClient {
       if (shouldCreateUsers) {
         console.log("Attempting to create users table...");
         const createUsersTable = {
-          sql: `CREATE TABLE users(id TEXT, created DATETIME, updated DATETIME, public_key TEXT, private_key TEXT);`,
+          sql: `CREATE TABLE users(id TEXT, created DATETIME, updated DATETIME, public_key TEXT, private_key TEXT, mnemonic TEXT);`,
           params: {},
         };
 
@@ -108,10 +106,12 @@ export class ParcelClient {
 
   public insertUser = async ({
     id,
+    mnemonic,
     privateKey,
     publicKey,
   }: {
     id: string;
+    mnemonic: string;
     privateKey: string;
     publicKey: string;
   }) => {
@@ -120,13 +120,14 @@ export class ParcelClient {
     const params = {
       $id: id,
       $created,
+      $mnemonic: mnemonic,
       $private_key: privateKey,
       $public_key: publicKey,
       $updated,
     };
 
     const insertStatement = {
-      sql: "INSERT INTO users VALUES ($id, $created, $updated, $private_key, $public_key)",
+      sql: "INSERT INTO users VALUES ($id, $created, $updated, $private_key, $public_key, $mnemonic)",
       params,
     };
 
